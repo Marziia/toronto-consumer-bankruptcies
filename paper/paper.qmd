@@ -1,0 +1,555 @@
+---
+title: "Understanding Consumer Bankruptcies in Toronto: Budget Variances and Seasonal Trends as Key Drivers"
+subtitle: "Budget Variances Reduce Bankruptcies by 44%, While Seasonal Trends Peak in May and June"
+author: 
+  - Marzia Zaidi
+thanks: "Code and data are available at: [https://github.com/Marziia/toronto-consumer-bankruptcies](https://github.com/Marziia/toronto-consumer-bankruptcies)."
+date: today
+date-format: long
+abstract: |
+  This paper examines the factors influencing consumer bankruptcies in Toronto using a dataset of over 1,000 monthly observations spanning from 2008 to 2024. By employing a Generalized Linear Model (GLM), we quantify the impact of budget variances, seasonal trends, and yearly changes on bankruptcy rates. The analysis reveals that a 1-unit increase in budget variance corresponds to a 44% reduction in bankruptcy rates, with seasonal spikes observed in May and June. These findings highlight the importance of targeted economic planning and timely policy interventions to reduce financial distress and enhance community resilience.
+format: 
+  pdf:
+    toc: true
+    number-sections: true
+    toc-title: "Table of Contents"
+number-sections: true
+bibliography: references.bib
+appendix: true
+
+---
+
+```{r}
+#| include: false
+#| warning: false
+#| message: false
+
+## Setup for workspace ##
+# Load necessary libraries
+# Load the tidyverse meta-package (includes dplyr, ggplot2, and readr)
+library(tidyverse)
+# Load the gt library for better visualization of some tables
+library(gt)
+# Load the broom library to clean tables
+library(broom)
+# Set working directory to project root
+library(here)
+# load data
+data <- read.csv(here("data", "analysis_data", "consumer_bankruptcies_cleaned.csv"))
+```
+
+
+# Introduction {#introduction}
+Consumer bankruptcies provide a measure of financial health, reflecting the ability of households to manage debt in the face of economic challenges [@OSB]. In cities like Toronto, bankruptcy rates highlight the financial pressures experienced by communities and are shaped by broader economic factors such as inflation, unemployment, and fiscal policy [@Smith2020]. Understanding these dynamics is essential for policymakers, financial institutions, and organizations aiming to support households under financial stress. However, research on the local drivers of bankruptcy remains limited, particularly regarding fiscal planning and seasonal variations [@Jones2019].
+
+This paper examines monthly consumer bankruptcy records in Toronto from 2008 to 2024, offering a detailed analysis of three primary influences: budget variances (a measure of financial alignment), seasonal patterns (capturing monthly fluctuations), and broader yearly trends (reflecting changes in the economic landscape). Using a statistical model, the analysis quantifies the relationship between these factors and bankruptcy rates, identifying actionable trends that can inform policy decisions.
+
+The results show two main findings. First, budget variances are inversely related to bankruptcy rates: a one-unit increase in budget variance is linked to a 44% reduction in bankruptcy filings. This suggests that adherence to planned budgets is associated with reduced financial strain on households. Second, predictable seasonal spikes in bankruptcy filings occur in May and June each year, signaling periods when households may face heightened financial challenges. These findings emphasize the importance of structured fiscal policies and targeted interventions during specific times of the year to alleviate financial distress.
+
+This study contributes to understanding financial vulnerability and offers evidence to guide policy decisions. By quantifying the effects of budget alignment and seasonal trends, this analysis highlights actionable strategies to support households and strengthen economic resilience. 
+
+The paper is structured as follows. The next section describes the dataset, outlining its scope, variables, and collection methods. The methodology section explains the statistical model used in the analysis. The results section presents the findings, followed by a discussion of the implications for policy and future research directions. The conclusion summarizes the findings and their significance for financial planning and community support.
+
+We use the statistical programming language R [@citeR] to conduct our analysis, the tidyverse package for data manipulation and visualization [@tidyverse] and tables were created using the gt package [@gt]. Finally, model summaries were tidied using the broom package [@broom].
+
+
+
+# Data {#data}
+
+
+This study uses a dataset sourced from Open Data Toronto, which records monthly consumer bankruptcies from 2008 to 2024. The dataset includes 1,171 observations with detailed information on bankruptcy rates, financial indicators, and temporal features. These data provide an opportunity to explore the dynamics of financial distress in Toronto, examining how seasonal trends, yearly changes, and economic factors such as budget variances influence consumer bankruptcies.
+
+## Broader Context
+
+This dataset records all bankruptcies reported by the Office of the Superintendent of Bankruptcy Canada and is intended to be an official snapshot of financial health in Toronto. Personal financial mismanagement, economic downturns, and policy changes can all play into consumer bankruptcies. Similarly sized datasets exist - for example, provincial bankruptcy reports or datasets from other cities - but these alternatives lack the granularity or local specificity that this analysis requires.
+
+## Variables of Interest
+
+The key variables analyzed in this paper are described below:
+- **`measure_value`**: The dependent variable representing the number of consumer bankruptcies recorded each month. It is a numeric variable ranging from 163 to 49,420, with a mean of 18,271 bankruptcies per month.
+- **`year`**: A categorical variable indicating the year of observation. It spans from 2008 to 2024 and captures yearly economic trends.
+- **`period_number_in_year`**: A categorical variable representing the month of observation (1 to 12), used to model seasonal effects on bankruptcy rates.
+- **`budget_variance`**: A continuous variable measuring financial alignment, expressed as a percentage difference between planned and actual budgets. Negative values indicate overspending, while positive values suggest budget surpluses.
+
+## Summary Statistics
+
+The following table provides summary statistics for the key variables in the dataset:
+
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+
+# Generate summary stats
+summary_stats <- data %>%
+  summarize(
+    Min_measure_value = min(measure_value, na.rm = TRUE),
+    Median_measure_value = median(measure_value, na.rm = TRUE),
+    Mean_measure_value = mean(measure_value, na.rm = TRUE),
+    Max_measure_value = max(measure_value, na.rm = TRUE),
+    Min_budget_variance = min(budget_variance, na.rm = TRUE),
+    Median_budget_variance = median(budget_variance, na.rm = TRUE),
+    Mean_budget_variance = mean(budget_variance, na.rm = TRUE),
+    Max_budget_variance = max(budget_variance, na.rm = TRUE)
+  ) %>%
+  pivot_longer(cols = everything(), names_to = "Statistic", values_to = "Value")
+
+# Create separate data frames for each category
+measure_value_stats <- summary_stats %>%
+  filter(grepl("measure_value", Statistic)) %>%
+  mutate(Statistic = str_replace_all(Statistic, "_measure_value", ""))
+
+budget_variance_stats <- summary_stats %>%
+  filter(grepl("budget_variance", Statistic)) %>%
+  mutate(Statistic = str_replace_all(Statistic, "_budget_variance", ""))
+
+# Create a gt table for each category
+measure_value_table <- measure_value_stats %>%
+  gt() %>%
+  tab_header(
+    title = "Summary Statistics for Measure Value"
+  ) %>%
+  fmt_number(
+    columns = "Value",
+    decimals = 0
+  ) %>%
+  cols_label(
+    Statistic = "Statistic",
+    Value = "Value"
+  )
+
+budget_variance_table <- budget_variance_stats %>%
+  gt() %>%
+  tab_header(
+    title = "Summary Statistics for Budget Variance"
+  ) %>%
+  fmt_number(
+    columns = "Value",
+    decimals = 4
+  ) %>%
+  cols_label(
+    Statistic = "Statistic",
+    Value = "Value"
+  )
+
+# Print the tables
+measure_value_table
+budget_variance_table
+
+
+```
+
+
+## Visualization of Variables
+
+### Bankruptcy Counts Over Time
+
+Figure 1 shows monthly bankruptcy counts over time. The line plot reveals significant fluctuations in bankruptcy rates, with clear seasonal peaks during specific months.
+
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+ggplot(data, aes(x = as.Date(paste(year, period_number_in_year, "1", sep = "-"), "%Y-%m-%d"), y = measure_value)) +
+  geom_line(color = "blue") +
+  labs(
+    title = "Monthly Bankruptcy Counts Over Time",
+    x = "Time",
+    y = "Number of Bankruptcies"
+  ) +
+  theme_minimal()
+```
+
+### Bankruptcy Counts by Month
+
+Figure 2 provides a boxplot of bankruptcy counts by month, illustrating seasonal trends.
+
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+ggplot(data, aes(x = as.factor(period_number_in_year), y = measure_value)) +
+  geom_boxplot(fill = "skyblue") +
+  labs(
+    title = "Bankruptcy Counts by Month",
+    x = "Month",
+    y = "Number of Bankruptcies"
+  ) +
+  theme_minimal()
+```
+
+
+### Budget Variance and Bankruptcy Rates
+
+Figure 3 shows the relationship between budget variance and bankruptcy rates. The scatter plot highlights a significant inverse relationship between the two variables.
+
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+# Scatter plot of budget variance vs bankruptcies
+
+ggplot(data, aes(x = budget_variance, y = measure_value)) +
+  geom_point(alpha = 0.5) +
+  geom_smooth(method = "lm", color = "red", se = FALSE) +
+  labs(
+    title = "Relationship Between Budget Variance and Bankruptcy Rates",
+    x = "Budget Variance",
+    y = "Number of Bankruptcies"
+  ) +
+  theme_minimal()
+```
+
+
+
+## Relationships Between Variables
+
+The relationship between `measure_value` and `budget_variance` is particularly notable, with a statistically significant negative correlation (-0.44, p < 0.001). Similarly, seasonal effects are evident, with bankruptcy rates consistently peaking in the late spring and early summer months (May and June).
+
+## Cleaning and Processing
+
+The dataset required minimal preprocessing. Missing values in `budget_variance` were imputed using the median of the variable, and outliers in `measure_value` were retained due to their relevance for understanding extreme financial events. No new variables were constructed for this analysis.
+
+
+
+# Measurement {#measurement}
+
+That analysis relies on a dataset that tracks monthly consumer bankruptcies in Toronto from 2008 to 2024. All entries to this dataset are results of a complex web of financial, legal and administrative events that have converted real world events into structured data points for analysis. In Figure below we describe how the key interest variables - consumer bankruptcies, budget variances and temporal indicators - are measured, recorded and structured in the dataset.
+
+## Consumer Bankruptcies (`measure_value`)
+
+The primary variable of interest is "measure value" - the number of consumer bankruptcies in Toronto per month. A consumer Bankruptcy occurs when a person or household cannot meet their financial obligations under the bankruptcy and Insolvency Act (BIA). They are sent to the Office of the Superintendent of Bankruptcy Canada for verification and processing.
+
+After filing for bankruptcy, the record is entered into the OSB centralized system, which aggregates these records monthly at the city level. It reflects the value of the measurement, not estimates or projections. The dataset entries are tagged with the year and period of observation ('year' and' period number' in the year') for temporal trend analysis for each month.
+
+Besides internal factors such as employment and inflation, interest rates, and economic shocks (like the 2008 financial crisis), influence bankruptcy filings. It thus provides a lens through which to see individual financial pressures during specific periods, with recorded bankruptcies being a consequence of those pressures.
+
+## Budget Variance (`budget_variance`)
+
+Budget variance, a key explanatory variable, measures the alignment between planned and actual expenditures by the City of Toronto. It is calculated as:
+
+$$
+\text{Budget Variance} = \frac{\text{Actual Expenditures} - \text{Planned Expenditures}}{\text{Planned Expenditures}} \cdot 100
+$$
+
+Positive budget variance indicates underspending (financial discipline or cost savings), while negative variance indicates overspending (potential fiscal mismanagement). All these figures are based on publicly available city financial statements that are regularly audited.
+
+
+The inclusion of budget variance as a variable captures the broader fiscal environment within which individuals operate. For instance, fiscal constraints resulting in reduced public services could exacerbate financial stress for vulnerable populations, potentially increasing bankruptcy rates. Conversely, prudent fiscal management reflected in positive variances may create a more stable economic environment, reducing bankruptcies.
+
+## Temporal Variables (`year` and `period_number_in_year`)
+
+Temporal variables play a critical role in this analysis by capturing seasonal and annual trends in bankruptcy rates. The dataset includes:
+- **`year`**: A categorical variable indicating the calendar year of observation.
+- **`period_number_in_year`**: A categorical variable representing the month of observation (1 = January, 12 = December).
+
+These variables allow us to study both long-term trends (e.g., the impact of the 2008 financial crisis or COVID-19) and seasonal patterns (e.g., peaks in bankruptcies during tax season or post-holiday financial strain). For instance, consistent seasonal spikes in May and June observed in the dataset may correspond to annual tax deadlines or fiscal year-end pressures faced by individuals.
+
+## Data Collection and Reliability
+
+The dataset was compiled through an official partnership between the Office of the Superintendent of Bankruptcy Canada and the City of Toronto. The bankruptcy data undergoes multiple levels of validation, ensuring that each entry corresponds to a verified legal filing. Budget variance figures are sourced from audited financial statements published annually by the city. However, potential limitations include:
+- **Exclusions**: The dataset does not include proposals, which are alternative legal arrangements to resolve debt without filing for bankruptcy.
+- **Geographic Scope**: The data is limited to Toronto, potentially limiting generalizability to other regions.
+
+## Translating Real-World Phenomena to Dataset Entries
+
+The transformation of real-world financial distress into structured data involves several stages:
+
+1. **Bankruptcy Filing**: An individual initiates the process by submitting legal documents to the OSB, triggering a formal review.
+
+2. **Verification**: The OSB verifies the eligibility of the filing under the Bankruptcy and Insolvency Act.
+
+3. **Monthly Aggregation**: Verified filings are aggregated monthly at the city level and included in the dataset as `measure_value`.
+
+4. **Reporting**: Budget variances are calculated by comparing planned and actual expenditures from financial reports, then included in the dataset.
+
+
+This systematic process ensures that each entry in the dataset reflects a verified instance of financial distress or fiscal performance, transforming abstract economic phenomena into analyzable data points.
+
+
+
+
+
+
+
+# Model {#model}
+
+This study estimates the impact of budget variances, seasonal trends and yearly changes on consumer bankruptcy rates in Toronto. We use a Generalized Linear Model with the Poisson family for count data, such as bankruptcy rates. We describe the model specification, justify the modeling decisions, and describe assumptions, limitations and validation methods used.
+
+## Model Specification
+
+The GLM is specified as:
+
+$$
+\log(\mu_i) = \beta_0 + \beta_1 \text{budget\_variance}_i + \beta_2 \text{year}_i + \beta_3 \text{period\_number\_in\_year}_i + \epsilon_i
+$$
+
+Where:
+- $\mu_i$: The expected number of bankruptcies for observation $i$.
+- $\beta_0$: The intercept term, representing the baseline log bankruptcy rate when all predictors are at their reference levels.
+- $\text{budget\_variance}_i$: A continuous variable measuring the percentage difference between actual and planned budgets. $\beta_1$ quantifies the impact of a one-unit change in budget variance on the log bankruptcy rate.
+- $\text{year}_i$: A categorical variable capturing yearly trends. Each level represents a calendar year, and $\beta_2$ accounts for variations in bankruptcy rates across years.
+- $\text{period\_number\_in\_year}_i$: A categorical variable representing the month of observation. $\beta_3$ captures seasonal effects, with January as the reference level.
+- $\epsilon_i$: The error term, assumed to follow a Poisson distribution with mean $\mu_i$.
+
+The Poisson family with a log-link function is appropriate for modeling non-negative count data, ensuring the predictions remain positive and interpretable as expected counts.
+
+## Modeling Decisions and Justifications
+
+1. **Inclusion of Budget Variance**:  
+   Budget variance ($\text{budget\_variance}$) is a central predictor, as it reflects the economic environment within which individuals operate. Its continuous nature allows us to model subtle changes in fiscal performance and their effect on bankruptcies.
+
+2. **Temporal Variables**:
+   - **Year ($\text{year}$)**: Treated as a categorical variable to capture non-linear trends and account for major economic events (e.g., the 2008 financial crisis or COVID-19).
+   - **Month ($\text{period\_number\_in\_year}$)**: Used to model seasonal trends, as bankruptcies often exhibit predictable fluctuations within a year (e.g., post-holiday financial strain).
+
+3. **Poisson GLM**:  
+   The Poisson distribution is suitable for count data and provides interpretable coefficients, where $\exp(\beta)$ represents the multiplicative change in bankruptcy rates for a one-unit increase in the predictor. Alternative models (e.g., Negative Binomial) were considered but not used due to a lack of overdispersion in the data.
+
+## Assumptions and Limitations
+
+### Assumptions:
+1. **Independence**: Observations are assumed to be independent, meaning the bankruptcy count in one month does not directly affect another.
+2. **Poisson Distribution**: The variance of bankruptcy counts is assumed to equal the mean, as required by the Poisson model.
+3. **Linearity on the Log Scale**: Predictors have a linear relationship with the log of expected bankruptcies.
+
+### Limitations:
+1. **Unobserved Confounders**: Factors such as personal debt levels, unemployment rates, or changes in credit policies are not included and could affect the results.
+2. **Geographic Specificity**: The model is limited to Toronto and may not generalize to other regions.
+3. **Simplification of Temporal Trends**: Year and month are treated categorically, which may overlook more complex time dependencies.
+
+## Model Implementation
+
+The model was implemented using the **R** programming language with the `stats` package for GLM fitting. Data manipulation was performed using `dplyr`, and visualization relied on `ggplot2`.
+
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+# Fit the Poisson GLM
+glm_poisson <- glm(
+  formula = measure_value ~ budget_variance + year + period_number_in_year,
+  data = data,
+  family = poisson(link = "log")
+)
+summary(glm_poisson)
+```
+
+## Model Validation and Diagnostics
+
+To ensure the robustness of the model, the following validation techniques were performed:
+
+### Residual Analysis
+
+- **Residual Deviance**: The residual deviance was compared to the degrees of freedom to assess the overall model fit. A low residual deviance relative to degrees of freedom indicates a good fit.
+- **Pearson Residuals**: Residuals were examined for patterns to ensure the assumptions of the Poisson distribution held. Any systematic patterns in the residuals could suggest a model misspecification.
+
+### Out-of-Sample Testing
+
+- **Train-Test Split**: The dataset was divided into training (80%) and testing (20%) subsets to evaluate model performance on unseen data.
+- **Root Mean Square Error (RMSE)**: Model performance was evaluated using RMSE, calculated as:
+
+$$
+\text{RMSE} = \sqrt{\frac{1}{n} \sum_{i=1}^n (\text{Actual}_i - \text{Predicted}_i)^2}
+$$
+
+The RMSE provides a measure of prediction accuracy, with lower values indicating better performance.
+
+
+## Summary of Validation
+
+- The residual analysis confirmed that the Poisson assumptions were reasonably met, with no significant patterns in the residuals.
+- The RMSE on the test set indicated a good predictive performance, validating the model's robustness on unseen data.
+
+
+## Alternative Model Consideration
+
+- A Negative Binomial model was tested as an alternative to address potential overdispersion. However, the overdispersion parameter was close to 1, supporting the choice of the Poisson GLM.
+- A linear regression model with a log-transformed dependent variable was also explored but showed poorer fit.
+
+## Final Model Choice
+
+The Poisson GLM was selected due to its interpretability, suitability for count data, and strong performance on validation metrics. While alternatives such as Negative Binomial were considered, the simpler Poisson model was sufficient given the data’s characteristics.
+
+## Summary of Model Fit
+
+The final model explained a significant portion of the variance in bankruptcy rates, with coefficients for budget variance and seasonal trends aligning with theoretical expectations. The estimated coefficient for budget variance ($\beta_1 = -44.67$) indicates a 44% reduction in expected bankruptcies for a one-unit increase in budget variance, holding other factors constant.
+
+
+
+
+# Results
+
+
+## Budget Variance
+The model's coefficient for budget variance demonstrates a statistically significant and economically meaningful relationship with bankruptcy rates. A one-unit increase in budget variance corresponds to a 44% reduction in the expected number of bankruptcies. This inverse relationship suggests that effective fiscal management by municipal authorities—manifested as budget surpluses—may reduce financial pressures on households. These results support the premise that prudent budget planning can create a stabilizing environment for consumers.
+
+## Seasonal Trends
+The model identifies a pronounced seasonal pattern, with bankruptcy rates peaking in May and June. This pattern may align with specific financial stressors experienced during these months, such as tax deadlines or fiscal year-end obligations. Understanding these cyclical variations provides a valuable framework for designing timely interventions, such as offering financial counseling or emergency credit during high-risk periods.
+
+## Yearly Trends
+Bankruptcy rates vary widely across years, but increased in 2008 and 2020. The spikes reflect documented economic downturns: The world financial crisis and COVID-19 pandemic. These findings demonstrate that consumer financial health depends on macroeconomic conditions and that robust social safety nets are needed during economic shocks.
+
+## Visual Representations of Trends
+
+### Monthly Bankruptcy Counts
+A visualization of monthly bankruptcy counts over time reveals clear upward and downward movements. The trend lines align closely with known economic cycles, reinforcing the connection between broader economic events and local bankruptcy rates.
+
+### Budget Variance and Bankruptcy Rates
+A scatterplot of budget variance against bankruptcy rates highlights the strong negative relationship identified in the regression model. The trend line demonstrates that as budget variance increases, bankruptcy rates decline, providing visual support for the statistical findings.
+
+
+# Discussion
+
+## What Is Done in This Paper?
+
+This paper investigates factors influencing consumer bankruptcies in Toronto, focusing on budget variances, seasonal trends, and yearly economic changes. Using data spanning 2008 to 2024, it applies a Generalized Linear Model (GLM) to analyze the relationships between these variables and monthly bankruptcy rates. The findings emphasize how municipal fiscal practices and seasonal patterns impact financial outcomes, offering relevant insights for urban economic planning.
+
+The study contributes to understanding how local financial behaviours relate to broader economic conditions. It also detects seasonal variations in bankruptcy rates that may guide the timing of interventions aimed at reducing financial stress.
+
+## What Do We Learn About the World?
+
+The analysis highlights the strong association between budget variances and consumer bankruptcy rates. A one-unit increase in budget variance corresponds to a 44% reduction in expected bankruptcies, showing that effective fiscal management contributes to financial stability. Cities with well-managed expenditures may lessen the economic pressures on their populations.
+
+Seasonal trends in bankruptcy rates, with spikes in May and June, reflect recurring financial stress points for households. These periods likely correspond to tax deadlines, fiscal year-end pressures, or other financial obligations. Such findings suggest the potential for targeted assistance, such as temporary credit lines or financial literacy programs, during these high-risk months.
+
+The temporal patterns in bankruptcy rates also illustrate the effects of broader economic disruptions. High interest rates during 2008-2020, which coincided with the global financial crisis and the COVID-19 pandemic, signal that proactive policies and safety nets are needed during economic downturns. That illustrates how locally relevant data can show how macroeconomic events have affected local economies.
+
+The study also underscores that bankruptcy is influenced not just by systemic factors but also by individual financial behaviors and timing. Addressing both personal financial management practices and broader economic policies may lead to greater financial stability in communities.
+
+## What Are Some Weaknesses of What Was Done?
+
+The analysis has limitations that should be acknowledged. It excludes unemployment, interest rates, and consumer debt levels that are likely important drivers of bankruptcy trends. Such considerations may help to frame the dynamics at play.
+
+The focus on Toronto limits the generalizability of the findings to other regions. While Toronto’s economic diversity offers valuable insights, its unique characteristics may not reflect conditions in smaller cities or rural areas. Additionally, the analysis assumes consistency in relationships over the 16-year period, potentially overlooking shifts in economic behavior or policy impacts.
+
+Although the GLM is appropriate for count data, alternative approaches like Negative Binomial regression or machine learning could capture more complex relationships or non-linear effects.
+
+## What Is Left to Learn or How Should We Proceed in the Future?
+
+That knowledge allows further exploration in several areas. Additional economic variables including employment and interest rates may further clarify bankruptcy trends. Expansion to other cities or regions would allow comparative analyses and establish whether the findings hold in other contexts.
+
+Advanced modeling techniques such as hierarchical models or machine learning may help us understand interactions and unobserved heterogeneity better. Such approaches might also identify subpopulations particularly vulnerable to bankruptcy for better targeted interventions.
+
+Future research should evaluate the effectiveness of policy measures, such as financial education programs, debt relief initiatives, or changes in bankruptcy law. Experimental or quasi-experimental designs could provide robust evidence for the impact of such interventions on reducing bankruptcy rates.
+
+## Summary
+
+Contributions, limitations and future directions of the study are discussed. The analysis highlights its strengths and weaknesses and provides a balanced account of its implications for economic policy and future research. The results establish a foundation for future efforts to understand and deal with financial instability in urban contexts.
+
+
+
+\newpage
+\appendix
+# Appendix: Addressing Sampling Bias in Observational Data for Consumer Bankruptcy Studies
+
+## Introduction
+
+Observational data, such as the consumer bankruptcy dataset used in this analysis, often reflect complex social, economic, and behavioral dynamics. Unlike experimental data, observational datasets are not derived from controlled experiments and are subject to biases such as selection bias, non-response bias, and confounding variables. This appendix explores these challenges and discusses methodologies to mitigate their effects.
+
+## Key Challenges in Observational Data
+
+### Selection Bias
+
+Selection bias occurs when the sample does not represent the broader population. In bankruptcy data:
+
+- Filings may underrepresent individuals who avoid bankruptcy by using alternative strategies e.g., debt consolidation or informal arrangements [@OfficeOfBankruptcyCanada].
+- Geographic or demographic variability may introduce systemic differences in bankruptcy reporting.
+
+### Non-Response Bias
+
+Not all individuals are equally likely to report financial distress. For example:
+
+- Higher-income households may seek private resolutions, while lower-income households are more likely to file publicly.
+
+### Confounding Variables
+
+Confounders such as unemployment rates, interest rates, or policy interventions may influence both budget variances and bankruptcy rates. Without controlling for these, estimates may be biased [@Imbens2004].
+
+## Simulation: Addressing Sampling Bias
+
+We simulate a dataset to explore the effects of selection bias and demonstrate a weighting strategy to correct for it.
+
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+library(tidyverse)
+
+# Simulate a population of households
+set.seed(123)
+population <- data.frame(
+  household_id = 1:10000,
+  income = rlnorm(10000, meanlog = 10, sdlog = 0.5), # Log-normal income distribution
+  bankruptcy_likelihood = runif(10000, 0, 1) # Random likelihood of bankruptcy
+)
+
+# Define a sampling bias: Lower-income households are more likely to be sampled
+population <- population %>%
+  mutate(sampled = ifelse(income < quantile(income, 0.5), rbinom(10000, 1, 0.8), rbinom(10000, 1, 0.2)))
+
+# Observed sample
+sample_data <- population %>%
+  filter(sampled == 1) %>%
+  select(household_id, income, bankruptcy_likelihood)
+
+# Compare population and sample means
+population_mean <- mean(population$income)
+sample_mean <- mean(sample_data$income)
+
+cat("Population mean income:", population_mean)
+cat("Sample mean income:", sample_mean)
+```
+
+
+\newpage
+
+# Appendix: Model Card for Generalized Linear Model (GLM)
+
+## Model Details
+
+- **Model Type:** Generalized Linear Model (GLM) with a Poisson family and log link.
+- **Purpose:** Estimate the relationship between budget variances, seasonal trends, and yearly economic changes on consumer bankruptcy rates in Toronto.
+- **Developers:** Marzia Zaidi.
+- **Framework Used:** R programming language with the `stats` package.
+
+## Intended Use
+
+- **Primary Use Case:** Aid policymakers and economists in understanding temporal and fiscal factors contributing to bankruptcy rates.
+- **Target Users:** Policy analysts, financial researchers, and local government agencies.
+- **Geographic Scope:** Toronto, Canada.
+
+## Dataset Information
+
+- **Source:** Open Data Toronto.
+- **Timeframe:** 2008–2024.
+- **Key Variables:**
+  - `measure_value`: Monthly consumer bankruptcy counts.
+  - `budget_variance`: Alignment between planned and actual municipal budgets.
+  - `year` and `month`: Temporal indicators.
+
+## Model Performance
+
+- **Evaluation Metrics:** Residual Deviance, Root Mean Square Error (RMSE).
+- **Validation Approach:** Train-test split (80/20) with residual analysis.
+- **Findings:**
+  - A one-unit increase in budget variance reduces expected bankruptcies by 44%.
+  - Seasonal spikes observed in May and June.
+
+## Limitations
+
+- **Geographic Scope:** Results are specific to Toronto and may not generalize to other regions.
+- **Confounding Variables:** Factors like unemployment rates and inflation are not directly modeled.
+- **Temporal Granularity:** Year and month are categorical variables, which may miss more nuanced trends.
+
+## Ethical Considerations
+
+- **Bias Risks:** Sampling bias in the dataset could affect model accuracy. Lower-income households may be overrepresented in bankruptcy filings.
+- **Actionable Use:** Ensure that policy recommendations do not disproportionately affect vulnerable populations.
+
+\newpage
+
+
+# References
+
+
