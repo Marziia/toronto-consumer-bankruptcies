@@ -1,8 +1,8 @@
-# Understanding Consumer Bankruptcies in Toronto
+# Understanding Temporal Trends in Consumer Bankruptcies in Toronto
 
 ## Overview
 
-This project analyzes consumer bankruptcies in Toronto between 2008 and 2024, focusing on budget variances, seasonal trends, and yearly economic shifts. Using a Generalized Linear Model (GLM), the study quantifies the relationship between these factors and bankruptcy rates, revealing that a one-unit increase in budget variance corresponds to a 44% reduction in expected bankruptcies. Seasonal spikes are observed in May and June, suggesting opportunities for targeted policy interventions. The findings highlight the role of municipal fiscal management and temporal patterns in understanding financial distress in urban populations.
+This project uses a Generalized Linear Model to examine consumer bankruptcies trends in Toronto. The findings show a 9.4% annual decrease in bankruptcy rates indicating improving financial conditions overall. Despite this downward trend, seasonal variations remain with bankruptcy rates higher in March, May and November. These periods of increased financial strain may correspond to specific economic pressures such as tax deadlines or seasonal expenses. Understanding these temporal patterns informs targeted interventions during high-risk months.
 
 ## File Structure
 
