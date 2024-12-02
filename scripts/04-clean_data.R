@@ -25,10 +25,10 @@ if (file.exists(file_path)) {
 #### Clean data ####
 # Select relevant columns and handle missing values
 bankruptcies_data_cleaned <- bankruptcies_data %>%
-  select(measure_value, budget_variance, year, period_number_in_year) %>%
+  select(measure_name,measure_value, year, period_number_in_year) %>%
   filter(
+    measure_name == "Number of Consumer Bankruptcies for the City of Toronto" & 
     !is.na(measure_value) & 
-      !is.na(budget_variance) & 
       !is.na(year) & 
       !is.na(period_number_in_year)
   )
