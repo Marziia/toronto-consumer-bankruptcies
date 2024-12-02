@@ -12,7 +12,7 @@ The repository is organized as follows:
 - `data/analysis_data` includes the cleaned and processed dataset used for analysis.
 - `other` includes related literature, documentation of LLM chat interactions, and exploratory sketches.
 - `paper` contains the files for generating the final research paper, including the Quarto document (`.qmd`), reference bibliography file, and the final PDF of the paper.
-- `scripts` houses R scripts used for simulating, cleaning, and analyzing the data.
+- `scripts` houses R scripts used for downloading the dataset from Open Data Toronto and for simulating, cleaning, and analyzing the data.
 
 ## Statement on LLM Usage
 
