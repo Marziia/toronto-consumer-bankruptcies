@@ -53,15 +53,7 @@ This paper focuses on estimating how the rate of consumer bankruptcies in Toront
 
 The analysis identifies a 9.4% annual reduction in bankruptcy rates, indicating an improving long-term trend, possibly due to economic recovery or effective policy interventions. Despite this progress, certain months—March, May, and November—consistently exhibit higher bankruptcy rates. These seasonal peaks suggest periods of heightened financial stress that may require targeted support measures. Policymakers and financial institutions can use this information to better plan interventions during times of greater risk.
 
-The remainder of this paper is structured as follows:
-
-1. [Data](#data): The dataset is introduced, including its structure, variables, and any relevant cleaning or construction steps. Summary statistics and graphs provide a clear overview of the key features of the data.
-
-2. [Model](#model): The GLM is presented with mathematical notation and clear explanations. Modeling decisions, assumptions, and limitations are detailed, along with steps taken for validation.
-
-3. [Results](#results): The findings are summarized using tables and graphs, focusing on long-term trends and seasonal effects. This section is dedicated to presenting the outcomes of the analysis.
-
-4. [Discussion](#discussion): This section interprets the results, considers their broader implications, and discusses limitations and opportunities for future research.
+The remainder of this paper is structured as follows. The dataset is introduced in the [Data](#data) section, including its structure, variables, and any relevant cleaning or construction steps. Summary statistics and graphs provide a clear overview of the key features of the data. The GLM is presented with mathematical notation and clear explanations in the [Model](#model) section. Modeling decisions, assumptions, and limitations are detailed, along with steps taken for validation. The findings are summarized in the [Results](#results) section using tables and graphs, focusing on long-term trends and seasonal effects. This section is dedicated to presenting the outcomes of the analysis. Finally, the [Discussion](#discussion) section interprets the results, considers their broader implications, and discusses limitations and opportunities for future research.
 
 
 We use the statistical programming language R [@citeR] to conduct our analysis, the tidyverse package for data manipulation and visualization [@tidyverse] and the gt package [@gt] for creating tables. Finally, model summaries were tidied using the broom package [@broom] and visualized using the modelsummary package [@modelsummary].
@@ -118,9 +110,7 @@ summary_stats %>%
 - **`period_number_in_year`**: This variable identifies the month of each observation. Certain months, such as March, May, and November, consistently show higher counts, reflecting patterns that align with financial pressures tied to tax deadlines or post-holiday expenses [@parker1999reaction].
 
 ## Data Preparation
-The dataset underwent minimal cleaning to ensure consistency:
-- Missing values were checked but none were found.
-- Qualitative notes accompanying certain observations were reviewed for context but excluded from the model.
+The dataset underwent minimal cleaning to ensure consistency. Missing values were checked but none were found.Qualitative notes accompanying certain observations were reviewed for context but excluded from the model.
 
 ## Graphical Representation
 **Time-Series Plot**  
@@ -174,7 +164,7 @@ Preliminary analysis suggests that time strongly influences bankruptcy rates:
 ## Measurement
 
 ### Capturing Bankruptcy Data
-The dataset captures monthly consumer bankruptcy counts, which are reported by the Office of the Superintendent of Bankruptcy Canada. This reporting process translates real-world financial distress into measurable data. When an individual files for bankruptcy, they provide detailed documentation of their financial status, including debts and assets, through licensed insolvency trustees. These filings are processed and verified by the Office, which aggregates the data into monthly reports for public use.
+The dataset captures monthly consumer bankruptcy counts, which are reported by the Office of the Superintendent of Bankruptcy Canada [@OSB]. This reporting process translates real-world financial distress into measurable data. When an individual files for bankruptcy, they provide detailed documentation of their financial status, including debts and assets, through licensed insolvency trustees. These filings are processed and verified by the Office, which aggregates the data into monthly reports for public use.
 
 The measurement process ensures accuracy and consistency through legal and procedural safeguards. Every bankruptcy filing reflects a formal acknowledgment of insolvency, where the individual has exceeded their ability to meet financial obligations. This means that the dataset is a reliable representation of consumer financial distress within the specific time periods and geographic boundaries it covers.
 
@@ -192,7 +182,7 @@ This structured approach to measurement minimizes the risk of errors and inconsi
 # Model {#model}
 
 ## Model Description
-To analyze consumer bankruptcy counts in Toronto, we employ a Generalized Linear Model (GLM) with a Poisson distribution.This approach works for count data because the dependent variable (`measure_value`) is discrete and non-negative. It is used to find trends over time and seasonal changes in bankruptcy rates.
+To analyze consumer bankruptcy counts in Toronto, we employ a Generalized Linear Model (GLM) with a Poisson distribution. This approach works for count data because the dependent variable (`measure_value`) is discrete and non-negative. It is used to find trends over time and seasonal changes in bankruptcy rates.
 
 The mathematical formulation of the model is as follows:
 
@@ -525,17 +515,9 @@ ggplot(monthly_summary, aes(x = factor(period_number_in_year, levels = 1:12, lab
 
 ## Additional Observations
 
-1. **Yearly Decline**:
-   - The consistent reduction in bankruptcy rates suggests possible economic improvements or the impact of financial policies.
-   - The model estimates an annual decline of approximately 9.4%.
+The consistent reduction in bankruptcy rates suggests possible economic improvements or the impact of financial policies. The model estimates an annual decline of approximately 9.4%. March, May, and November show the largest increases in bankruptcy counts compared to January, reflecting recurring periods of financial strain. These patterns may be linked to tax deadlines, holiday-related expenses, or other financial pressures.
 
-2. **Seasonal Peaks**:
-   - March, May, and November show the largest increases in bankruptcy counts compared to January, reflecting recurring periods of financial strain.
-   - These patterns may be linked to tax deadlines, holiday-related expenses, or other financial pressures.
-
-3. **Model Performance**:
-   - The predicted values align closely with observed data, both yearly and monthly.
-   - Diagnostic checks confirmed that residuals did not exhibit systematic patterns, validating the model's structure.
+In terms of the predictive power of the model, the predicted values align closely with observed data, both yearly and monthly, and diagnostic checks confirmed that residuals did not exhibit systematic patterns, validating the model's structure.
 
 ---
 
@@ -567,18 +549,17 @@ The persistence of these seasonal peaks also underscores the importance of timin
 
 
 
-1. **Lack of Demographic Information**: This dataset excludes demographic and socioeconomic data such as age, income, or employment status. Such variables might identify groups most at risk for financial distress.
-2. **Exclusion of External Factors**: Macroeconomic indicators such as inflation rates, unemployment, and interest rates are excluded because they lack data. They might all affect bankruptcy rates and should be investigated further.
-3. **Simplified Seasonal Effects**: The model assumes consistent seasonal effects across all years, which may not fully capture year-specific anomalies, such as the financial disruptions caused by the COVID-19 pandemic.
-4. **Assumption of Independence**: Monthly bankruptcy counts are assumed to be independent. However, financial stress in one month could impact subsequent months, introducing potential autocorrelation that the model does not address.
+This dataset excludes demographic and socioeconomic data such as age, income, or employment status. Such variables might identify groups most at risk for financial distress. In addition, macroeconomic indicators such as inflation rates, unemployment, and interest rates are excluded because they lack data. They might all affect bankruptcy rates and should be investigated further.
+
+The model assumes consistent seasonal effects across all years, which may not fully capture year-specific anomalies, such as the financial disruptions caused by the COVID-19 pandemic. Finally, monthly bankruptcy counts are assumed to be independent. However, financial stress in one month could impact subsequent months, introducing potential autocorrelation that the model does not address.
 
 ## Directions for Future Research
 
-1. **Incorporating External Predictors**: Future models should include macroeconomic variables like inflation, unemployment, and housing market trends to better explain observed variations in bankruptcy rates.
-2. **Exploring Demographic Differences**: Analyzing data segmented by age, income, or employment status could identify which populations are most vulnerable to bankruptcy, enabling targeted interventions.
-3. **Using Time-Series Models**: Employing time-series techniques, such as ARIMA models, could address autocorrelation and provide dynamic forecasting capabilities.
-4. **Evaluating Policy Impacts**: Research could focus on assessing how specific policies, such as debt-relief programs or bankruptcy law changes, have influenced observed trends.
-5. **Comparing Regions**: Expanding the analysis to include data from other cities or provinces could help determine whether Toronto’s trends are unique or part of broader national patterns.
+Future models should include macroeconomic variables like inflation, unemployment, and housing market trends to better explain observed variations in bankruptcy rates. Analyzing data segmented by age, income, or employment status could identify which populations are most vulnerable to bankruptcy, enabling targeted interventions would be useful.
+
+Employing time-series techniques, such as ARIMA models, could address autocorrelation and provide dynamic forecasting capabilities.
+
+Research could focus on assessing how specific policies, such as debt-relief programs or bankruptcy law changes, have influenced observed trends. Expanding the analysis to include data from other cities or provinces could help determine whether Toronto’s trends are unique or part of broader national patterns.
 
 ## Concluding Remarks
 
